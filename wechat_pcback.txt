@@ -1,0 +1,261 @@
+import uiautomation as uiauto
+import os
+from time import sleep
+import pyautogui
+import http.client
+import json
+import requests
+import re
+class WechatAuto:
+
+    def __init__(self, wechat_locate: str):
+        """
+        启动微信，定位基本元素
+        :param wechat_locate: 微信安装绝对路径.exe
+        """
+        # os.system(rf'start {wechat_locate}')
+
+        # 找到微信窗口
+        self.wechat_window = uiauto.WindowControl(searchDepth=1, ClassName='WeChatMainWndForPC')
+        # 选择微信窗口
+        self.wechat_window.SwitchToThisWindow()
+        # 窗口控制栏,固定,最大小化,退出
+        # self.window_control = self.wechat_window.ToolBarControl(searchDepth=5, LocalizedControlType="工具栏")
+        # self.wechat_window.ButtonControl(searchDepth=6, Name='置顶').Click()
+
+        # 用户导航：用户,聊天,通讯录,收藏……
+        self.guide_tool = self.wechat_window.ToolBarControl(searchDepth=4, Name='导航')
+        # 会话列表
+        self.chat_list = self.wechat_window.ListControl(searchDepth=8, Name='会话')
+        # 当前聊天对象消息列表窗口,聊天内容
+        self.chat_massage = self.wechat_window.ListControl(searchDepth=12, Name='消息')
+        # 聊天界面搜索框
+        self.chat_search = self.wechat_window.EditControl(searchDepth=7, Name='搜索')
+        # 先清除搜索框再输入内容
+        self.chat_search_clear = self.wechat_window.ButtonControl(searchDepth=7, Name='清空')
+        # 搜索结果
+        self.search_result = self.wechat_window.ListControl(searchDepth=8, Name="@str:IDS_FAV_SEARCH_RESULT:3780",
+                                                            LocalizedControlType="列表")
+        # 发送按钮
+        self.send_button = self.wechat_window.ButtonControl(searchDepth=15, Name="发送(S)")
+
+        self.chat_name: str = ""
+
+        self.baiduToken =self.getBaiDuToken()
+
+        print(f"token = ",self.baiduToken)
+    def input_content(self, name: str):
+        return self.wechat_window.EditControl(searchDepth=14, LocalizedControlType="编辑", Name=name)
+
+    # def searchFriend(self, name: str, where: str = "聊天") -> list:
+    #     """
+    #     从聊天列表查找聊天对象
+    #     :param name: 聊天对象名称
+    #     :param where: 查找位置=聊天/通讯录
+    #     :return:
+    #     """
+    #     where_index: int = 0
+    #     match where:
+    #         case "聊天":
+    #             where_index = 1
+    #         case "通讯录":
+    #             where_index = 2
+    #         case _:
+    #             print("invalid value")
+    #             return [0, 0]
+    #     # 定位聊天列表
+    #     try:
+    #         chat_list = self.guide_tool.GetChildren()[where_index]
+    #         assert chat_list.Name, where
+    #         chat_list.Click()
+    #     except AssertionError:
+    #         print("can not locate the contacts element,check with the Wechat version and try again,or the wrong "
+    #               "name about your friend")
+    #         return [0, 0]
+    #     except Exception as err:
+    #         print(err)
+    #         return [0, 0]
+    #     # 定位搜索框
+    #     try:
+    #         check = self.chat_search.Name
+    #         assert check, "搜索"
+    #     except AssertionError:
+    #         print("can not find the search element,check with the Wechat version and try again")
+    #         return [0, 0]
+    #     except Exception as err:
+    #         print(err)
+    #         return [0, 0]
+    #
+    #     # 从聊天列表中查找聊天对象
+    #     self.chat_search.Click()
+    #     self.chat_search_clear.Click()
+    #     self.chat_search.Click()
+    #     self.chat_search.SendKeys(text=name, waitTime=0.2)
+    #     try:
+    #         assert self.search_result.GetChildren()[1], name
+    #     except AssertionError:
+    #         print("can not find the element in chet list,search in from contact")
+    #         return [0, 0]
+    #     except Exception as err:
+    #         print(err)
+    #         return [0, 0]
+    #
+    #     return [1, self.search_result.GetChildren()[1]]
+    #
+    # def chatWithSomeone(self, name: str, massage: str) -> int:
+    #     """
+    #     查找聊天对象,定位到聊天输入框
+    #     :param name: 聊天对象名称
+    #     :param massage: 聊天发送信息
+    #     :return: 成功返回1
+    #     """
+    #     if name != self.chat_name:
+    #         chat_with = self.searchFriend(name)
+    #         if chat_with[0] == 0:
+    #             chat_with = self.searchFriend(name, where="通讯录")
+    #         if chat_with[0] == 0:
+    #             print(f"can not find your friend name {name}")
+    #             return 0
+    #         chat_with[1].Click()
+    #         self.chat_name = name
+    #     content = self.input_content(name)
+    #     content.Click()
+    #     content.SendKeys(text=massage, waitTime=0.2)
+    #     self.send_button.Click()
+    #
+    #     return 1
+    #
+    # def autoAddFriend(self, auto_add: bool = False):
+    #     """
+    #     开启自动添加好友申请
+    #     :param auto_add: 是True,否False
+    #     :return: str,添加的好友名称
+    #     """
+    #     pass
+    #
+    # def autoChatBaseOnContent(self, question_answer: dict[str, str]):
+    #     """
+    #     根据内容回循环复所有聊天
+    #     :param question_answer: 聊天内容:回复内容，如果朋友向我发送的内容包含在【聊天内容】中，则使用【回复内容】进行回复
+    #     :return: None
+    #     """
+    #     friend_question: dict[str, str] = {}
+    #     for chat in self.chat_list.GetChildren():
+    #         chat_name = chat.TextControl(searchDepth=5, foundIndex=1).Name
+    #         chat_last_content = chat.TextControl(searchDepth=5, foundIndex=3).Name
+    #         friend_question[chat_name] = chat_last_content
+    #     qus = question_answer.keys()
+    #
+    #     for friend in friend_question:
+    #         # 这里是包含关系，也可以使用【jieba】模块进行词语解析
+    #         my_answer = [question_answer[j] for j in qus if j in friend_question[friend]]
+    #         for answer in my_answer:
+    #             if answer != friend_question[friend]:
+    #                 self.chatWithSomeone(name=friend, massage=answer)
+    #                 friend_question[friend] = answer
+    #
+    # @staticmethod
+    # def setFileToClipBoard(file_path: str) -> int:
+    #     """
+    #     ui自动化，将文件复制到剪贴板中
+    #     :param file_path: 文件绝对地址
+    #     :return: 复制城成功返回1
+    #     """
+    #     if not os.path.exists(file_path):
+    #         return 0
+    #     father_path = os.path.abspath(os.path.join(file_path, os.pardir))
+    #     file_name = file_path.split("\\")[-1]
+    #     window_name = father_path.split("\\")[-1]
+    #     try:
+    #         os.system(rf"start explorer {father_path}")
+    #         explorer = uiauto.WindowControl(searchDepth=1, ClassName="CabinetWClass", Name=window_name)
+    #         file_locate = explorer.ListItemControl(searchDepth=8, Name=file_name, LocalizedControlType="项目列表")
+    #         sleep(1)
+    #         file_locate.Click(simulateMove=True, waitTime=0.2)
+    #         close = uiauto.ButtonControl(searchDepth=4, Name="关闭")
+    #         pyautogui.hotkey('ctrl', 'c')
+    #         close.Click()
+    #     except Exception as err:
+    #         print(err)
+    #         return 0
+    #     return 1
+    #
+    # def sendFileToSomeone(self, name: str, file_path: str) -> int:
+    #     """
+    #     发送文件给某人
+    #     :param name: 发送对象
+    #     :param file_path: 文件路径
+    #     :return:
+    #     """
+    #     check_friend = self.searchFriend(name)
+    #     if check_friend[0] == 0:
+    #         print(f"can not find your friend name {name}")
+    #         return 0
+    #     check_file = self.setFileToClipBoard(file_path)
+    #     if check_file == 0:
+    #         print(f"on such file {file_path}")
+    #         return 0
+    #     check_friend[1].Click()
+    #     content = self.input_content(name)
+    #     content.Click()
+    #     pyautogui.hotkey('ctrl', 'v')
+    #     self.send_button.Click()
+    #     return 1
+
+    def getBaiDuToken(self):
+
+        url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=iWmbSPBFy4oXH5NeG8QNeLaB&client_secret=aNrI6vkhPTr4tGhbTBgPECwdpTdqGzl2"
+
+        response = requests.request("GET", url)
+        reqResult = response.text
+        print(reqResult)
+        print(json.loads(reqResult))
+        return json.loads(reqResult)["access_token"]
+
+   def listener():
+
+
+    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-3.5-8k-0205?access_token="+wechat.baiduToken
+    headers = {
+        'Authorization': 'Bearer app-FEKJAQOdVPKJf40znr5IIbUd',
+        'Content-Type': 'application/json'
+    }
+    while True:
+        sleep(5)
+        for chat in wechat.chat_list.GetChildren():
+
+            print(chat.Name)
+            print(chat.TextControl(searchDepth=5, foundIndex=1).Name)
+            if chat.Name.find("新消息") != -1:
+                chat.Click()
+                msg = wechat.chat_massage
+                msg_children = msg.GetChildren()
+                my_content = ""
+                if len(msg_children) > 0:
+                    last_xiaoxi = msg_children[-1]
+                else:
+                    continue
+                print(f""+last_xiaoxi.Name)
+                if last_xiaoxi.Name == "[图片]":
+                   last_xiaoxi.CaptureToImage(savePath="c:\\Users\\endym\\Desktop\\1.png", x=90,width=160)
+                   my_content = "嘻嘻"
+                else:
+                    print("last_xiaoxi.Name=",last_xiaoxi.Name)
+                    payload = json.dumps({
+                        "messages": [{"role": "user", "content": last_xiaoxi.Name}],
+                        "system": "你是个人做诗助手，根据用户的输入内容，做一首诗回复。"
+                    })
+
+                    print(payload)
+                    response = requests.request("POST", url, headers=headers, data=payload)
+
+                    reqResult = response.text
+                    print(reqResult)
+                    massage = json.loads(reqResult)["result"]
+
+                    content = wechat.input_content(chat.TextControl(searchDepth=5, foundIndex=1).Name)
+                    content.Click()
+                    result = massage.replace("Observation: ", "")
+                    if result!="":
+                        content.SendKeys(text=result, waitTime=0.2)
+                        wechat.send_button.Click()

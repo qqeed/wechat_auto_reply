@@ -1,0 +1,5 @@
+2024-07-25 13:40:15.806 wechat_pc.py[21] __init__ -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2024-07-25 13:47:40.444 wechat_pc.py[21] __init__ -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2024-07-25 17:06:42.668 wechat_pc.py[21] __init__ -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2024-07-25 17:43:54.470 wechat_pc.py[24] __init__ -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2024-07-25 17:46:56.722 wechat_pc.py[24] __init__ -> 
